@@ -6,7 +6,7 @@ import TimeSlotPicker from '@/components/TimeSlotPicker';
 import Toast from '@/components/Toast';
 import ShareButton from '@/components/ShareButton';
 import Footer from '@/components/Footer';
-import { createReservation, getReservationsByDate, getAllReservations, subscribeToReservations, formatTime, formatDateForDB, type Reservation } from '../../lib/supabase';
+import { createReservation, getAllReservations, subscribeToReservations, formatTime, formatDateForDB, type Reservation } from '../../lib/supabase';
 
 export default function Home() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -127,7 +127,7 @@ export default function Home() {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [handleRealtimeUpdate]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">

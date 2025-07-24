@@ -89,7 +89,7 @@ export const formatDateForDB = (date: Date): string => {
 }
 
 // 실시간 구독 설정 (예약 변경 시 실시간 업데이트)
-export const subscribeToReservations = (callback: (payload: any) => void) => {
+export const subscribeToReservations = (callback: (payload: unknown) => void) => {
   return supabase
     .channel('reservations')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, callback)

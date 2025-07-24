@@ -38,7 +38,7 @@ export default function ShareButton({ onShare }: ShareButtonProps) {
       setTimeout(() => {
         setIsCopied(false);
       }, 2000);
-    } catch (error) {
+    } catch {
       // 클립보드 접근 실패 시 fallback
       const textArea = document.createElement('textarea');
       textArea.value = url;
