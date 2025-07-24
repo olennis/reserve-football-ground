@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Calendar from '@/components/Calendar';
 import TimeSlotPicker from '@/components/TimeSlotPicker';
 import Toast from '@/components/Toast';
@@ -111,10 +111,10 @@ export default function Home() {
   };
 
   // 실시간 업데이트 처리
-  const handleRealtimeUpdate = () => {
+  const handleRealtimeUpdate = useCallback(() => {
     // 변경사항이 있을 때 전체 데이터 다시 로드
     loadReservations();
-  };
+  }, []);
 
   // 컴포넌트 마운트 시 데이터 로드 및 실시간 구독 설정
   useEffect(() => {
