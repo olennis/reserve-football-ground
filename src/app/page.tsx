@@ -1,103 +1,211 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect } from 'react';
+import Calendar from '@/components/Calendar';
+import TimeSlotPicker from '@/components/TimeSlotPicker';
+import Toast from '@/components/Toast';
+import ShareButton from '@/components/ShareButton';
+import Footer from '@/components/Footer';
+import { createReservation, getReservationsByDate, getAllReservations, subscribeToReservations, formatTime, formatDateForDB, type Reservation } from '../../lib/supabase';
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [reservations, setReservations] = useState<Map<string, string[]>>(new Map());
+  const [isLoading, setIsLoading] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'info';
+    isVisible: boolean;
+  }>({
+    message: '',
+    type: 'success',
+    isVisible: false,
+  });
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const handleReservation = async (date: Date, startTime: string, endTime: string) => {
+    setIsLoading(true);
+    try {
+      // 로컬 시간대로 날짜 포맷팅 (UTC 변환 방지)
+      const dateKey = formatDateForDB(date);
+      
+      // Supabase에 예약 저장
+      await createReservation(dateKey, startTime, endTime);
+      
+      // 로컬 상태 업데이트
+      const currentReservations = reservations.get(dateKey) || [];
+      const newReservations = new Map(reservations);
+      newReservations.set(dateKey, [...currentReservations, `${startTime}-${endTime}`]);
+      setReservations(newReservations);
+      
+      setToast({
+        message: `${startTime} ~ ${endTime} 계획이 등록되었습니다!`,
+        type: 'success',
+        isVisible: true,
+      });
+    } catch (error) {
+      console.error('예약 실패:', error);
+      setToast({
+        message: '계획 등록에 실패했습니다. 다시 시도해주세요.',
+        type: 'error',
+        isVisible: true,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const closeToast = () => {
+    setToast(prev => ({ ...prev, isVisible: false }));
+  };
+
+  const handleShare = (message: string) => {
+    setToast({
+      message,
+      type: 'success',
+      isVisible: true,
+    });
+  };
+
+  const handleEmailCopy = (message: string) => {
+    setToast({
+      message,
+      type: 'success',
+      isVisible: true,
+    });
+  };
+
+  const getReservedSlots = (date: Date): string[] => {
+    // 로컬 시간대로 날짜 포맷팅 (UTC 변환 방지)
+    const dateKey = formatDateForDB(date);
+    return reservations.get(dateKey) || [];
+  };
+
+  // 데이터베이스에서 예약 데이터 로드
+  const loadReservations = async () => {
+    try {
+      const allReservations = await getAllReservations();
+      const reservationMap = new Map<string, string[]>();
+      
+      allReservations.forEach((reservation: Reservation) => {
+        const dateKey = reservation.date;
+        const formattedStartTime = formatTime(reservation.start_time);
+        const formattedEndTime = formatTime(reservation.end_time);
+        const timeSlot = `${formattedStartTime}-${formattedEndTime}`;
+        
+        if (reservationMap.has(dateKey)) {
+          reservationMap.get(dateKey)!.push(timeSlot);
+        } else {
+          reservationMap.set(dateKey, [timeSlot]);
+        }
+      });
+      
+      setReservations(reservationMap);
+    } catch (error) {
+      console.error('예약 데이터 로드 실패:', error);
+      setToast({
+        message: '데이터를 불러오는데 실패했습니다.',
+        type: 'error',
+        isVisible: true,
+      });
+    }
+  };
+
+  // 실시간 업데이트 처리
+  const handleRealtimeUpdate = () => {
+    // 변경사항이 있을 때 전체 데이터 다시 로드
+    loadReservations();
+  };
+
+  // 컴포넌트 마운트 시 데이터 로드 및 실시간 구독 설정
+  useEffect(() => {
+    loadReservations();
+    
+    // 실시간 구독 설정
+    const subscription = subscribeToReservations(handleRealtimeUpdate);
+    
+    // 컴포넌트 언마운트 시 구독 해제
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="relative">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-6 sm:mb-8 text-center">🏃‍♂️ 첨단구장 사용 현황판</h1>
+          
+          <div className="absolute top-0 right-0">
+            <ShareButton onShare={handleShare} />
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        
+        <div className="mt-6 sm:mt-8 lg:mt-10 mb-8 sm:mb-10 lg:mb-12">
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 sm:p-6">
+            <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-orange-800 mb-3 sm:mb-4">
+              📋 이용 안내사항
+            </h3>
+            <ul className="space-y-2 sm:space-y-3 text-xs sm:text-sm lg:text-base text-orange-700">
+              <li className="flex items-start gap-2">
+                <span className="text-orange-500 mt-0.5">•</span>
+                <span>다른 팀의 구장 이용 계획을 미리 확인하세요</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-orange-500 mt-0.5">•</span>
+                <span>이 서비스는 <strong className="text-red-600 font-bold bg-red-50 px-1 py-0.5 rounded">구장 예약이 아닌</strong> 경기 상황 공유 목적입니다</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-orange-500 mt-0.5">•</span>
+                <span>현장 선착순 원칙은 그대로 유지됩니다</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-orange-500 mt-0.5">•</span>
+                <span>그렇기 때문에, 계획과 상관 없이 먼저 경기하고 있는 팀이 있을 수 있습니다.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-orange-500 mt-0.5">•</span>
+                <span>먼저 사용중인 팀이 있다면 이 서비스를 공유해주셔서 서로의 헛걸음 방지에 함께 해주세요</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
+          <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold mb-4">날짜 선택</h2>
+            <Calendar 
+              selectedDate={selectedDate} 
+              onDateSelect={setSelectedDate}
+              reservations={reservations}
+            />
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold mb-4">시간 선택</h2>
+            {selectedDate ? (
+              <TimeSlotPicker 
+                selectedDate={selectedDate}
+                onReservation={handleReservation}
+                reservedSlots={getReservedSlots(selectedDate)}
+                isLoading={isLoading}
+              />
+            ) : (
+              <p className="text-sm sm:text-base text-gray-500">먼저 날짜를 선택해주세요.</p>
+            )}
+          </div>
+        </div>
+        
+        
+      </div>
+      
+      <Footer onCopy={handleEmailCopy} />
+
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={closeToast}
+      />
     </div>
   );
 }
