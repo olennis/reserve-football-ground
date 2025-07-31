@@ -1,15 +1,16 @@
 import { createClient } from '@supabase/supabase-js'
 
 // Supabase 환경 변수 - 실제 프로젝트에서는 .env.local 파일에서 관리하세요
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
 
-if (!supabaseUrl) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable')
-}
-
-if (!supabaseAnonKey) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable')
+if (typeof window !== 'undefined') {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    console.error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable')
+  }
+  if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    console.error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable')
+  }
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
