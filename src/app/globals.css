@@ -25,17 +25,18 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* iOS Safari에서 텍스트 색상 강제 적용 */
-* {
-  color: #1f1f1f;
+/* iOS Safari에서 기본 텍스트 색상 강제 적용 */
+h1, h2, h3, h4, h5, h6, p, span, div:not([class*="text-"]) {
+  color: #1f1f1f !important;
 }
 
-/* 특정 요소들은 의도된 색상 유지 */
-.text-gray-500,
-.text-gray-400,
-.text-orange-700,
-.text-orange-800,
-.text-red-600,
-.text-white {
+/* Tailwind color 클래스가 있는 요소는 제외 */
+[class*="text-gray"],
+[class*="text-orange"],
+[class*="text-red"],
+[class*="text-white"],
+[class*="text-yellow"],
+[class*="text-blue"],
+[class*="text-green"] {
   color: inherit !important;
 }
