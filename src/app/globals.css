@@ -12,12 +12,7 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* 다크모드 미디어 쿼리 제거 - 항상 라이트 모드 유지 */
 
 body {
   background: var(--background);
@@ -25,18 +20,3 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* iOS Safari에서 기본 텍스트 색상 강제 적용 */
-h1, h2, h3, h4, h5, h6, p, span, div:not([class*="text-"]) {
-  color: #1f1f1f !important;
-}
-
-/* Tailwind color 클래스가 있는 요소는 제외 */
-[class*="text-gray"],
-[class*="text-orange"],
-[class*="text-red"],
-[class*="text-white"],
-[class*="text-yellow"],
-[class*="text-blue"],
-[class*="text-green"] {
-  color: inherit !important;
-}
