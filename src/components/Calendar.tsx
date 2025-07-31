@@ -10,7 +10,10 @@ interface CalendarProps {
 }
 
 export default function Calendar({ selectedDate, onDateSelect, reservations }: CalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
 
   const getDaysInMonth = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -49,10 +52,21 @@ export default function Calendar({ selectedDate, onDateSelect, reservations }: C
   };
 
   const isPastDate = (day: number) => {
-    const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return date < today;
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+    const todayYear = today.getFullYear();
+    const todayMonth = today.getMonth();
+    const todayDay = today.getDate();
+    
+    // 년도가 과거인 경우
+    if (currentYear < todayYear) return true;
+    // 월이 과거인 경우  
+    if (currentYear === todayYear && currentMonth < todayMonth) return true;
+    // 같은 년월에서 일자가 과거인 경우
+    if (currentYear === todayYear && currentMonth === todayMonth && day < todayDay) return true;
+    
+    return false;
   };
 
   const renderCalendarDays = () => {
